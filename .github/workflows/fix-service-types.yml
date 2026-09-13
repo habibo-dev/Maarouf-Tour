@@ -1,0 +1,35 @@
+name: Fix service icon types
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix service tuple typing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/main.tsx')
+          s = p.read_text()
+          old = "const services = [\n  ['رحلات مخصصة', 'نصمم الرحلة حول وقتك، ميزانيتك وأسلوب سفرك.', Sparkles],\n  ['حجز الفنادق', 'خيارات إقامة منتقاة مع مساعدة قبل وأثناء الرحلة.', Hotel],\n  ['تذاكر الطيران', 'مقارنة مسارات مناسبة ومتابعة تفاصيل السفر.', Plane],\n  ['برامج العمرة', 'تنظيم واضح وبرامج مريحة للعائلات والأفراد.', HeartHandshake],\n]"
+          new = "type Service = { title: string; text: string; Icon: typeof Sparkles }\n\nconst services: Service[] = [\n  { title: 'رحلات مخصصة', text: 'نصمم الرحلة حول وقتك، ميزانيتك وأسلوب سفرك.', Icon: Sparkles },\n  { title: 'حجز الفنادق', text: 'خيارات إقامة منتقاة مع مساعدة قبل وأثناء الرحلة.', Icon: Hotel },\n  { title: 'تذاكر الطيران', text: 'مقارنة مسارات مناسبة ومتابعة تفاصيل السفر.', Icon: Plane },\n  { title: 'برامج العمرة', text: 'تنظيم واضح وبرامج مريحة للعائلات والأفراد.', Icon: HeartHandshake },\n]"
+          if old not in s:
+              raise SystemExit('services declaration not found')
+          s = s.replace(old, new, 1)
+          old2 = "function Services({lang}:{lang:Lang}) { return <><PageHero kicker=\"SERVICES\" title={lang==='ar'?'كل ما تحتاجه، في مكان واحد.':'Everything you need, in one place.'} text={lang==='ar'?'خدمات سفر عملية تساعدك قبل الرحلة وأثناءها.':'Practical travel services that support you before and during your trip.'}/><section className=\"section\"><div className=\"container service-grid\">{services.map(([title,text,Icon])=><div className=\"service-card\" key={title}><span className=\"iconbox\"><Icon/></span><h3>{lang==='ar'?title:title}</h3><p>{text}</p><Link className=\"text-link\" to=\"/contact\">{lang==='ar'?'اطلب الخدمة':'Request service'} <ArrowLeft size={15}/></Link></div>)}</div></section></> }"
+          new2 = "function Services({lang}:{lang:Lang}) { return <><PageHero kicker=\"SERVICES\" title={lang==='ar'?'كل ما تحتاجه، في مكان واحد.':'Everything you need, in one place.'} text={lang==='ar'?'خدمات سفر عملية تساعدك قبل الرحلة وأثناءها.':'Practical travel services that support you before and during your trip.'}/><section className=\"section\"><div className=\"container service-grid\">{services.map(({title,text,Icon})=><div className=\"service-card\" key={title}><span className=\"iconbox\"><Icon/></span><h3>{title}</h3><p>{text}</p><Link className=\"text-link\" to=\"/contact\">{lang==='ar'?'اطلب الخدمة':'Request service'} <ArrowLeft size={15}/></Link></div>)}</div></section></> }"
+          if old2 not in s:
+              raise SystemExit('services component not found')
+          s = s.replace(old2, new2, 1)
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.tsx
+          git commit -m 'fix: type service icon tuples'
+          git push
