@@ -1,0 +1,39 @@
+name: Fix quick actions types
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix TypeScript tuple typing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/main.tsx')
+          s = p.read_text()
+          start = s.index('function QuickActions(')
+          end = s.index('function Planner(', start)
+          new = '''function QuickActions({ lang }: { lang: Lang }) {
+            const items: Array<[typeof Plane, string, string, string]> = [
+              [Plane, lang === 'ar' ? 'تذاكر الطيران' : 'Billets d’avion', lang === 'ar' ? 'أفضل مسار يناسبك' : 'Le meilleur itinéraire', '/contact'],
+              [Hotel, lang === 'ar' ? 'الفنادق' : 'Hôtels', lang === 'ar' ? 'إقامة مختارة بعناية' : 'Séjours sélectionnés', '/contact'],
+              [HeartHandshake, lang === 'ar' ? 'العمرة' : 'Omra', lang === 'ar' ? 'برامج روحانية منظمة' : 'Programmes spirituels', '/omra'],
+              [Sparkles, lang === 'ar' ? 'رحلة مخصصة' : 'Sur mesure', lang === 'ar' ? 'صمم تجربتك بنفسك' : 'Créez votre expérience', '/contact'],
+            ]
+            return <section className="quick"><div className="container quick-grid">{items.map(([Icon, title, sub, href]) => <Link to={href} className="quick-card" key={href + title}><span className="iconbox"><Icon size={20}/></span><span><b>{title}</b><small>{sub}</small></span><ArrowLeft size={16}/></Link>)}</div></section>
+          }
+          '''
+          p.write_text(s[:start] + new + s[end:])
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.tsx
+          git commit -m "fix: type quick action icons" || exit 0
+          git push
